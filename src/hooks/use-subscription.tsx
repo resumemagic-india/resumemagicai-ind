@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { useToast } from '@/hooks/use-toast';
 import { getUserLocation } from '@/utils/location';
+import { getDownloadStatus } from '@/utils/downloadManager'; // <-- NEW
 
 interface SubscriptionStatus {
   isSubscribed: boolean;
@@ -35,7 +36,7 @@ interface SubscriptionStatus {
     remaining_quantity: number;
   }>;
   totalRemainingDocuments: number;
-  interviewGenerations: number; // Added interviewGenerations
+  interviewGenerations: number;
 }
 
 export const useSubscription = () => {
@@ -59,7 +60,7 @@ export const useSubscription = () => {
     isAdmin: false,
     documentPurchases: [],
     totalRemainingDocuments: 0,
-    interviewGenerations: 0, // Initialized interviewGenerations
+    interviewGenerations: 0,
   });
   const [loading, setLoading] = useState(true);
   const [cancellationLoading, setCancellationLoading] = useState(false);
@@ -70,9 +71,13 @@ export const useSubscription = () => {
 
       if (!session?.user?.id) return;
 
+      // --- Download counts and status from downloadManager ---
+      const downloadStatus = await getDownloadStatus(session.user.id);
+
+      // --- Fetch other profile/subscription info as before ---
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('download_count, free_downloads_remaining, email, location_display, country, interview_generations')
+        .select('email, location_display, country, interview_generations')
         .eq('id', session.user.id)
         .single();
 
@@ -81,11 +86,10 @@ export const useSubscription = () => {
         return;
       }
 
-      const fetchedInterviewGenerations = profileData?.interview_generations ?? 0; // Get value from profile
+      const fetchedInterviewGenerations = profileData?.interview_generations ?? 0;
 
       // Define admin emails
       const ADMIN_EMAILS = ['arshinsandeep@gmail.com', 'resumemagicai@gmail.com'];
-      // Check if the fetched profile email is in the admin list
       const isAdmin = ADMIN_EMAILS.includes(profileData?.email ?? '');
       console.log('User email:', profileData?.email, 'Is admin:', isAdmin);
 
@@ -120,8 +124,6 @@ export const useSubscription = () => {
 
       console.log('Subscription data:', subscriptionData);
 
-      const downloadCount = profileData?.download_count || 0;
-      const freeDownloadsRemaining = profileData?.free_downloads_remaining || 0;
       const userEmail = profileData?.email || session.user.email;
       const locationDisplay = profileData?.location_display;
       const country = profileData?.country;
@@ -210,36 +212,15 @@ export const useSubscription = () => {
 
       const currentPeriodEnd = activeSubscription?.current_period_end;
 
-      let downloadsRemaining = 0;
-      let totalDownloads = 0;
+      const downloadLimitReached = !isAdmin && !downloadStatus.hasDownloads;
 
-      if (isSubscriptionPlus || isAdmin) {
-        downloadsRemaining = Infinity;
-        totalDownloads = Infinity;
-      } else if (isPerDocumentSubscription) {
-        downloadsRemaining = totalRemainingDocuments;
-        totalDownloads = totalDocumentPurchases;
-      } else if (isBasicSubscription) {
-        totalDownloads = (activeSubscription?.total_downloads ?? 8) + freeDownloadsRemaining;
-        downloadsRemaining = totalDownloads - downloadCount;
-      } else {
-        totalDownloads = freeDownloadsRemaining;
-        downloadsRemaining = freeDownloadsRemaining - downloadCount;
-      }
-
-      downloadsRemaining = Math.max(0, downloadsRemaining);
-
-      const downloadLimitReached = !isAdmin && downloadsRemaining <= 0;
-
-      console.log(`Downloads - Count: ${downloadCount}, Free Remaining: ${freeDownloadsRemaining}, Plan Remaining: ${downloadsRemaining}, Total Allowed: ${totalDownloads}, Limit Reached: ${downloadLimitReached}`);
-
-      const hasDownloadsRemaining = downloadsRemaining > 0;
+      console.log(`Downloads - Count: ${downloadStatus.downloadCount}, Free Remaining: ${downloadStatus.freeDownloadsRemaining}, Plan Remaining: ${downloadStatus.downloadsRemaining}, Total Allowed: ${downloadStatus.downloadsUsed}, Limit Reached: ${downloadLimitReached}`);
 
       const hasUnlimitedDownloads = isSubscriptionPlus || isAdmin;
 
       const hasInterviewPrepAccess = isSubscriptionPlus || isAdmin;
 
-      const hasPremiumTemplates = isSubscriptionPlus || (isSubscribed && hasDownloadsRemaining) || isAdmin;
+      const hasPremiumTemplates = isSubscriptionPlus || (isSubscribed && downloadStatus.hasDownloads) || isAdmin;
       const hasPrioritySupport = isSubscriptionPlus || isAdmin;
       const hasJobInterviewQuestionsAccess = isSubscriptionPlus || isAdmin;
 
@@ -250,16 +231,16 @@ export const useSubscription = () => {
         isBasicSubscription,
         isPerDocumentSubscription,
         isSubscriptionPlus,
-        downloadCount,
-        freeDownloadsRemaining: isAdmin ? 999 : freeDownloadsRemaining,
+        downloadCount: downloadStatus.downloadCount,
+        freeDownloadsRemaining: isAdmin ? 999 : downloadStatus.freeDownloadsRemaining,
         downloadLimitReached,
         email: userEmail,
         currentPeriodEnd,
         location: locationDisplay,
         country,
         cancelAtPeriodEnd,
-        downloadsRemaining,
-        totalDownloads,
+        downloadsRemaining: downloadStatus.downloadsRemaining,
+        totalDownloads: downloadStatus.downloadsUsed,
         hasUnlimitedDownloads,
         hasInterviewPrepAccess,
         hasPremiumTemplates,
@@ -269,7 +250,7 @@ export const useSubscription = () => {
         documentPurchases,
         totalRemainingDocuments,
         isAdmin,
-        interviewGenerations: fetchedInterviewGenerations, // Set interviewGenerations in status
+        interviewGenerations: fetchedInterviewGenerations,
       });
 
     } catch (error) {
@@ -290,13 +271,11 @@ export const useSubscription = () => {
     }
 
     try {
-      // First check if user has a subscription that allows unlimited downloads
       if (status.isSubscriptionPlus || status.isAdmin) {
         console.log('User has Subscription Plus, allowing download');
         return true;
       }
 
-      // Check for document purchases with remaining quantity
       const { data: purchases, error: purchasesError } = await supabase
         .from('document_purchases')
         .select('id, quantity, used_quantity, remaining_quantity')
@@ -306,19 +285,16 @@ export const useSubscription = () => {
       if (purchasesError) {
         console.error('Error checking document purchases:', purchasesError);
       } else if (purchases && purchases.length > 0) {
-        // Sum up remaining quantity across all purchases
         const totalRemaining = purchases.reduce((total, purchase) => 
           total + (purchase.remaining_quantity || 0), 0);
           
         console.log(`User has ${totalRemaining} purchased documents remaining`);
         
         if (totalRemaining > 0) {
-          // We'll decrement in the updateDownloadCount function when actually downloading
           return true;
         }
       }
 
-      // Check for free downloads if no purchased documents remain
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('free_downloads_remaining')
@@ -332,14 +308,12 @@ export const useSubscription = () => {
         return true;
       }
 
-      // If we reach here, user has no downloads available
       toast({
         title: "No downloads remaining",
         description: "Please purchase more documents to continue",
         variant: "destructive",
       });
       
-      // Navigate to pricing page
       navigate('/pricing');
       return false;
     } catch (error) {

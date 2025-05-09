@@ -14,7 +14,7 @@ import WorkExperienceSection from "@/components/resume/sections/WorkExperienceSe
 import EducationSection from "@/components/resume/sections/EducationSection";
 import SkillsSection from "@/components/resume/sections/SkillsSection";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { updateDownloadCount } from "@/utils/resumeStorage";
+//import { updateDownloadCount } from "@/utils/resumeStorage";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useSubscription } from "@/hooks/use-subscription";
 import { useIsMobile } from "@/hooks/use-mobile";

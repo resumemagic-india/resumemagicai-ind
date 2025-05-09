@@ -4,7 +4,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { FileDown, Loader2, Target, Zap, Sparkles, Star, Save, Eye, Gift, ArrowRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { uploadResumeToStorage, updateDownloadCount, saveOptimizedResume } from "@/utils/resumeStorage";
+import { uploadResumeToStorage, saveOptimizedResume } from "@/utils/resumeStorage";
 import { ResumeUpload } from "./ResumeUpload";
 import { ATSScoreDisplay } from "./ATSScoreDisplay";
 import { ResumePreviewCard } from "./ResumePreviewCard";
@@ -18,6 +18,7 @@ import { useSubscription } from "@/hooks/use-subscription";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { motion } from "framer-motion";
 import ResumeATSFeedback from "./ResumeATSFeedback";
+import { handleDownload } from "@/utils/downloadManager"; // <-- Use new download logic
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB limit
 
@@ -38,7 +39,18 @@ export const ResumeForm = () => {
   const location = useLocation();
   const { toast } = useToast();
   const isMobile = useIsMobile();
-  const { handleDownloadAttempt, downloadLimitReached, isBasicSubscription, isPlusSubscription, freeDownloadsRemaining } = useSubscription();
+  const {
+    downloadLimitReached,
+    isBasicSubscription,
+    isPlusSubscription,
+    freeDownloadsRemaining,
+    downloadsRemaining,
+    purchasedQuantity,
+    usedPurchasedDownloads,
+    remainingPurchasedDownloads,
+    checkSubscriptionStatus,
+  } = useSubscription();
+
   const [jobDescription, setJobDescription] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [isLoadingDocx, setIsLoadingDocx] = useState(false);
@@ -134,7 +146,8 @@ export const ResumeForm = () => {
     }
   };
 
-  const handleDownload = async (format: 'pdf' | 'docx') => {
+  // Unified download logic
+  const handleDownloadClick = async (format: 'pdf' | 'docx') => {
     if (!file || !jobDescription) {
       toast({
         title: "Missing information",
@@ -144,8 +157,27 @@ export const ResumeForm = () => {
       return;
     }
 
-    const canProceed = await handleDownloadAttempt();
-    if (!canProceed) return;
+    // Use new download logic
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      toast({
+        title: "Not signed in",
+        description: "Please sign in to download.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const result = await handleDownload(user.id);
+    if (!result.allowed) {
+      toast({
+        title: "No downloads remaining",
+        description: "Please purchase more downloads to continue.",
+        variant: "destructive",
+      });
+      navigate("/pricing");
+      return;
+    }
 
     if (format === 'docx') {
       setIsLoadingDocx(true);
@@ -169,9 +201,6 @@ export const ResumeForm = () => {
     }
 
     const endpoint = "/api/optimize";
-    console.log("Using endpoint:", endpoint);
-    console.log("Selected template:", selectedTemplate);
-
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}${endpoint}`, {
         method: "POST",
@@ -191,7 +220,6 @@ export const ResumeForm = () => {
       const contentType = response.headers.get('Content-Type');
       if (contentType && contentType.includes('application/json')) {
         const data = await response.json();
-        console.log("Response data:", data);
 
         if (data.ats_score) {
           setAtsScore(data.ats_score);
@@ -222,7 +250,10 @@ export const ResumeForm = () => {
             });
           }
 
-          await updateDownloadCount();
+          // Refresh download info in UI
+          if (typeof checkSubscriptionStatus === "function") {
+            await checkSubscriptionStatus();
+          }
         } else {
           setShowMyResumesLink(false);
           throw new Error("No file data received from server");
@@ -382,7 +413,7 @@ export const ResumeForm = () => {
           type="button"
           className="relative overflow-hidden group bg-gradient-to-r from-royal-600 via-royal-500 to-royal-400 hover:from-royal-700 hover:via-royal-600 hover:to-royal-500 text-white transition-all duration-300"
           disabled={isLoadingDocx || isLoadingPdf || !file || !jobDescription || downloadLimitReached}
-          onClick={() => handleDownload('docx')}
+          onClick={() => handleDownloadClick('docx')}
         >
           <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
           {isLoadingDocx ? (
@@ -404,7 +435,7 @@ export const ResumeForm = () => {
           type="button"
           className="relative overflow-hidden group bg-gradient-to-r from-red-600 via-red-500 to-red-400 hover:from-red-700 hover:via-red-600 hover:to-red-500 text-white transition-all duration-300"
           disabled={isLoadingDocx || isLoadingPdf || !file || !jobDescription || downloadLimitReached}
-          onClick={() => handleDownload('pdf')}
+          onClick={() => handleDownloadClick('pdf')}
         >
           <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
           {isLoadingPdf ? (

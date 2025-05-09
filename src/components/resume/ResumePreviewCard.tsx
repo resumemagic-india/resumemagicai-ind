@@ -3,9 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Eye, FileDown, X, AlertTriangle } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { downloadFile } from "@/utils/resumeStorage";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { handleDownload } from "@/utils/downloadManager"; // Use new download logic
 
 interface ResumePreviewCardProps {
   previewUrl: string;
@@ -20,51 +21,73 @@ export const ResumePreviewCard: React.FC<ResumePreviewCardProps> = ({
 }) => {
   const isMobile = useIsMobile();
   const { toast } = useToast();
+  const { session } = useAuth();
   const [isDownloading, setIsDownloading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [previewError, setPreviewError] = useState<string | null>(null);
-  
+
   // Create better preview URLs for different file types
   const getViewerUrl = () => {
     if (previewType === 'pdf') {
-      // For PDFs, use the direct URL (browsers can usually display PDFs)
       return previewUrl;
     } else {
-      // For DOCX files, use Microsoft's Office Online viewer (embed version)
       return `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(previewUrl)}`;
     }
   };
-  
-  const handleDownload = async () => {
+
+  const handleDownloadClick = async () => {
     try {
       setIsDownloading(true);
-      
-      // Log the download attempt
-      console.log(`Attempting to download file: ${previewUrl}`);
-      
+
+      if (!session?.user?.id) {
+        toast({
+          title: "Not signed in",
+          description: "Please sign in to download.",
+          variant: "destructive",
+        });
+        setIsDownloading(false);
+        return;
+      }
+
+      // Check download permission and update count
+      const result = await handleDownload(session.user.id);
+      if (!result.allowed) {
+        toast({
+          title: "No downloads remaining",
+          description: "Please purchase more downloads to continue.",
+          variant: "destructive",
+        });
+        window.location.href = "/pricing";
+        setIsDownloading(false);
+        return;
+      }
+
       // Fetch the file content
       const response = await fetch(previewUrl);
       if (!response.ok) {
         throw new Error(`Failed to fetch file: ${response.status} ${response.statusText}`);
       }
-      
+
       // Convert to blob
       const blob = await response.blob();
-      
+
       // Create a descriptive filename
       const fileName = `optimized-resume.${previewType}`;
-      
-      // Use the helper function to download and update the count in database
-      const result = await downloadFile(blob, fileName);
-      
-      if (result.success) {
-        toast({
-          title: "Download successful",
-          description: `Your resume has been downloaded in ${previewType.toUpperCase()} format.`,
-        });
-      } else {
-        throw new Error(result.message || "Download helper failed");
-      }
+
+      // Download the file
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast({
+        title: "Download successful",
+        description: `Your resume has been downloaded in ${previewType.toUpperCase()} format.`,
+      });
     } catch (error) {
       console.error('Download error:', error);
       toast({
@@ -78,48 +101,38 @@ export const ResumePreviewCard: React.FC<ResumePreviewCardProps> = ({
   };
 
   const handleOpenInNewTab = () => {
-    // Use the same logic as getViewerUrl to determine the URL to open
     let urlToOpen: string;
     if (previewType === 'docx') {
-      // Use Microsoft viewer URL for DOCX
       urlToOpen = `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(previewUrl)}`;
     } else {
-      // Open PDF directly
       urlToOpen = previewUrl;
     }
-    console.log(`Opening in new tab: ${urlToOpen}`);
-    window.open(urlToOpen, '_blank', 'noopener,noreferrer'); // Added noopener,noreferrer for security
+    window.open(urlToOpen, '_blank', 'noopener,noreferrer');
   };
 
-  // Check if URL is accessible
   useEffect(() => {
     const checkUrl = async () => {
       setIsLoading(true);
       setPreviewError(null);
-      
+
       try {
         const response = await fetch(previewUrl, { method: 'HEAD' });
         if (!response.ok) {
-          console.warn(`Preview URL might not be accessible: ${previewUrl}, status: ${response.status}`);
           setPreviewError(`File not accessible (${response.status}). Please try downloading instead.`);
         }
       } catch (error) {
-        console.error('Error checking preview URL:', error);
         setPreviewError("Network error. Please try downloading instead.");
       } finally {
-        // Set loading to false even if there's an error
         setIsLoading(false);
       }
     };
-    
+
     if (previewUrl) {
       checkUrl();
     }
   }, [previewUrl]);
 
-  // Handle iframe loading errors
   const handleIframeError = () => {
-    console.error("Iframe failed to load");
     setPreviewError("The file preview could not be loaded. Please try downloading the file instead.");
     setIsLoading(false);
   };
@@ -185,7 +198,7 @@ export const ResumePreviewCard: React.FC<ResumePreviewCardProps> = ({
             Open in New Tab
           </Button>
           <Button 
-            onClick={handleDownload}
+            onClick={handleDownloadClick}
             disabled={isDownloading}
             className="bg-royal-600 hover:bg-royal-700 text-white w-full sm:w-auto"
           >
