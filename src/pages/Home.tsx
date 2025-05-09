@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom"; // <-- Ensure this is imported
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { User, LogOut, Download, InfinityIcon, X, Calendar, Instagram, Sparkles, Zap, FileCheck, Bot } from "lucide-react";
+import { User, LogOut, Download, InfinityIcon, X, Calendar, Instagram, Sparkles, Zap, FileCheck, Bot, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { UserProfileModal } from "@/components/account/UserProfileModal";
@@ -24,6 +24,7 @@ import { format } from "date-fns";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
 import { CompleteProfileModal } from "@/components/account/CompleteProfileModal";
+import { PurchasedDownloadsDisplay } from "@/components/home/PurchasedDownloadsDisplay"; // <-- Import the new component
 
 // Animation Variants
 const containerVariants = {
@@ -70,14 +71,14 @@ const Home = () => {
     isSubscribed, 
     isBasicSubscription,
     isSubscriptionPlus,
-    downloadsRemaining,
-    totalDownloads,
+    downloadsRemaining, // This is for free/subscription-specific downloads
+    totalDownloads,     // This is for free/subscription-specific downloads
     currentPeriodEnd,
     cancelAtPeriodEnd,
     cancelSubscription,
     cancellationLoading,
     canAccessMockInterview,
-    loading
+    loading // This is general subscription loading
   } = useSubscription();
   const navigate = useNavigate(); // <-- Initialize useNavigate
 
@@ -303,6 +304,21 @@ const Home = () => {
                         </span>
                       </div>
                     )}
+                  </>
+                )}
+
+                {/* Use the new component here */}
+                <PurchasedDownloadsDisplay userId={session?.user?.id} isSubscriptionPlus={isSubscriptionPlus} />
+
+                {!isSubscribed && downloadsRemaining === 0 && (
+                  <>
+                    <Separator orientation="vertical" className="mx-2 h-4 bg-white/20" />
+                    <div className="flex items-center" title="Free Downloads Used">
+                      <Download className="w-3 h-3 mr-1 text-red-400" />
+                      <span className="text-xs text-white/80">
+                        Free Download Used
+                      </span>
+                    </div>
                   </>
                 )}
               </motion.div>

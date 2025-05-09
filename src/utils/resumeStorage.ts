@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { format } from 'date-fns'; // Import date-fns for timestamp formatting
+import { useNavigate } from "react-router-dom"; // Add this import if using hooks in components
 
 export const uploadResumeToStorage = async (file: File) => {
   const { data: { session } } = await supabase.auth.getSession();
@@ -289,86 +290,49 @@ export const canDownload = async (): Promise<boolean> => {
 };
 
 export async function updateDownloadCount(): Promise<boolean> {
-  console.log('Updating download count and document usage...');
-  
   try {
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user) {
-      console.error('No user session found, cannot update download count');
-      return false;
-    }
-    
-    // First check for document purchases with remaining quantity
-    const { data: purchases, error: purchasesError } = await supabase
+    if (!session?.user) return false;
+
+    // Find the oldest purchase with remaining_quantity > 0
+    const { data: purchases, error } = await supabase
       .from('document_purchases')
-      .select('id, quantity, used_quantity, remaining_quantity')
+      .select('id, used_quantity, remaining_quantity')
       .eq('user_id', session.user.id)
-      .gt('remaining_quantity', 0) // Only get purchases with remaining documents
-      .order('purchase_date', { ascending: true }); // Use oldest purchases first
-      
-    if (purchasesError) {
-      console.error('Error fetching document purchases:', purchasesError);
+      .gt('remaining_quantity', 0)
+      .order('purchase_date', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching purchases:', error);
       return false;
     }
-    
-    // If we have purchases with remaining quantity, use one
+
     if (purchases && purchases.length > 0) {
-      const purchaseToUse = purchases[0]; // Get the oldest purchase with remaining docs
-      
-      console.log(`Using document from purchase ${purchaseToUse.id}. Before: ${purchaseToUse.used_quantity}/${purchaseToUse.quantity} used`);
-      
-      // Increment the used_quantity for this purchase
+      const purchase = purchases[0];
+      // Atomically update used_quantity and remaining_quantity
       const { error: updateError } = await supabase
         .from('document_purchases')
-        .update({ 
-          used_quantity: purchaseToUse.used_quantity + 1 
+        .update({
+          used_quantity: purchase.used_quantity + 1,
+          remaining_quantity: purchase.remaining_quantity - 1
         })
-        .eq('id', purchaseToUse.id);
-        
+        .eq('id', purchase.id);
+
       if (updateError) {
-        console.error('Error updating document purchase usage:', updateError);
+        console.error('Error updating purchase:', updateError);
         return false;
       }
-      
-      console.log(`Document usage updated: ${purchaseToUse.used_quantity + 1}/${purchaseToUse.quantity} used`);
-      
-      // Also update the profile download count for tracking purposes
-      const { error: profileUpdateError } = await supabase
+
+      // Optionally update profile download_count for analytics
+      await supabase
         .from('profiles')
         .update({ download_count: supabase.rpc('increment', { x: 1 }) })
         .eq('id', session.user.id);
-        
-      if (profileUpdateError) {
-        console.error('Error updating profile download count:', profileUpdateError);
-      }
-      
+
       return true;
     }
-    
-    // If we reach here, no document purchases with remaining quantity were found
-    console.log('No remaining purchased documents found');
-    
-    // Check for free downloads (this would be handled by the existing code)
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('free_downloads_remaining')
-      .eq('id', session.user.id)
-      .single();
-      
-    if (profileData?.free_downloads_remaining > 0) {
-      // Use a free download
-      await supabase
-        .from('profiles')
-        .update({ 
-          free_downloads_remaining: profileData.free_downloads_remaining - 1,
-          download_count: supabase.rpc('increment', { x: 1 })
-        })
-        .eq('id', session.user.id);
-        
-      return true;
-    }
-    
-    // If we get here, user has no remaining documents or free downloads
+
+    // No remaining purchased documents
     return false;
   } catch (error) {
     console.error('Error in updateDownloadCount:', error);
@@ -401,7 +365,8 @@ export const downloadFile = async (blob: Blob, fileName: string): Promise<{succe
   try {
     const canUserDownload = await canDownload();
     if (!canUserDownload) {
-      return { success: false, message: "You've reached the limit of your free usage." };
+      window.location.href = "/pricing"; // Redirect to pricing page
+      return { success: false, message: "No downloads remaining. Redirecting to pricing." };
     }
     
     // Create download link

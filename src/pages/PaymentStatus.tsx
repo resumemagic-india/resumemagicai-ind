@@ -55,22 +55,10 @@ const PaymentStatus = () => {
 
   const checkPaymentStatus = async () => {
     try {
-      // Debug: Show full URL and all parameters
-      console.log("Full URL:", window.location.href);
-      console.log("All search parameters:", Object.fromEntries(new URLSearchParams(location.search)));
-
-      // Get the merchant order ID from URL parameter - check multiple possible parameter names
+      // Only look for 'orderId' in the URL
       const params = new URLSearchParams(location.search);
-      let merchantOrderId = params.get('merchantOrderId') || 
-                        params.get('merchant_order_id') || 
-                        params.get('orderId') || 
-                        params.get('txnId') ||
-                        params.get('order_id') ||  // Additional parameter names PhonePe might use
-                        params.get('transaction_id');
-      const statusParam = params.get('status'); // PhonePe might send a status parameter
+      let merchantOrderId = params.get('orderId');
 
-      console.log(`Checking payment for orderId: ${merchantOrderId}, status param: ${statusParam}`);
-      
       // If merchantOrderId is missing, try to get ANY recent order from the database
       if (!merchantOrderId && session?.user?.id) {
         console.log("No merchant order ID in URL, attempting to find ANY recent order...");
@@ -120,10 +108,9 @@ const PaymentStatus = () => {
         return;
       }
 
-      // Call our Supabase Edge Function to verify payment
-      console.log(`Calling Edge Function for order: ${merchantOrderId}`);
+      // Replace Edge Function Call with Direct API Call
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/verify-payment?merchantOrderId=${merchantOrderId}`,
+        `${import.meta.env.VITE_API_URL1}/api/phonepe-order-status/${merchantOrderId}`,
         {
           method: 'GET',
           headers: {
@@ -132,53 +119,31 @@ const PaymentStatus = () => {
           }
         }
       );
-      
+
       if (!response.ok) {
         const errorText = await response.text();
         console.error(`API Error (${response.status}):`, errorText);
         throw new Error(`API returned ${response.status}: ${errorText}`);
       }
-      
-      const data: PaymentResponse = await response.json();
-      console.log('Edge function response:', data);
-      
-      // Check PhonePe state directly if available
-      if (data.phonepe_response?.state) {
-        console.log(`PhonePe reports state: ${data.phonepe_response.state}`);
-        
-        if (data.phonepe_response.state === 'COMPLETED') {
-          setPaymentStatus('success');
-          setPaymentDetails({
-            ...data.order_details,
-            phonepe_details: data.phonepe_response
-          });
-          return;
-        } else if (data.phonepe_response.state === 'FAILED') {
-          // Check for error details
-          const errorDetails = data.phonepe_response.payment_details?.[0]?.error_code;
-          console.log("Payment failed with error:", errorDetails);
-          setPaymentStatus('failed');
-          return;
-        }
-        // If not completed or failed, it's still pending
-      }
-      
-      // Fall back to our own status determination
-      if (data.payment_status === 'success') {
+
+      const data = await response.json();
+      console.log('Backend response:', data);
+
+      if (data.state === 'COMPLETED') {
         setPaymentStatus('success');
-        setPaymentDetails(data.order_details);
-      } else if (data.payment_status === 'failed') {
+        setPaymentDetails(data);
+        return;
+      } else if (data.state === 'FAILED') {
         setPaymentStatus('failed');
+        return;
       } else {
-        // Still pending
         setPaymentStatus('pending');
-        
-        // If status is still pending and we haven't retried too many times, schedule another check
+        // Retry logic as before...
         if (retryCount < 3) {
           console.log(`Scheduling retry #${retryCount + 1} in 3 seconds`);
           setTimeout(() => {
             setRetryCount(prev => prev + 1);
-          }, 3000); // Try again in 3 seconds
+          }, 3000);
         }
       }
     } catch (error) {
