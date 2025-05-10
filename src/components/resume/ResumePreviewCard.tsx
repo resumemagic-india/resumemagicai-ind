@@ -72,7 +72,7 @@ export const ResumePreviewCard: React.FC<ResumePreviewCardProps> = ({
       const blob = await response.blob();
 
       // Create a descriptive filename
-      const fileName = `optimizedresumes.${previewType}`;
+      const fileName = `optimized-resume.${previewType}`;
 
       // Download the file
       const url = window.URL.createObjectURL(blob);
