@@ -2,26 +2,24 @@ import { supabase } from "@/integrations/supabase/client";
 import { format } from 'date-fns'; // Import date-fns for timestamp formatting
 import { useNavigate } from "react-router-dom"; // Add this import if using hooks in components
 
-export const uploadResumeToStorage = async (file: File, userEmail: string) => {
-  // Extract the part before '@' from the email
-  const folderName = userEmail.split('@')[0];
-  const filePath = `${folderName}/${file.name}`;
+export const uploadResumeToStorage = async (file: File) => {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user?.email) return null;
+
+  const fileExt = file.name.split('.').pop();
+  const userEmail = session.user.email;
+  const fileName = `${userEmail}/${crypto.randomUUID()}.${fileExt}`;
 
   const { error: uploadError } = await supabase.storage
-    .from('optimizedresumes')
-    .upload(filePath, file);
+    .from('resumes')
+    .upload(fileName, file);
 
   if (uploadError) {
     console.error('Error uploading to Supabase:', uploadError);
     return null;
   }
 
-  const publicUrl = `https://fhgjwfczltqpzuhxuhuv.supabase.co/storage/v1/object/public/optimizedresumes/${folderName}/${file.name}`;
-
-  return {
-    filePath,
-    publicUrl
-  };
+  return fileName;
 };
 
 export const saveOptimizedResume = async (fileData: string, originalFileName: string, fileType: string) => {
