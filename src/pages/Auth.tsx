@@ -2,35 +2,55 @@ import { AuthButton } from "@/components/auth/AuthButton";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Navigate, Link } from "react-router-dom";
 import { 
-    CircleUser, Database, FileCheck, Bot, Sparkles, FileText, 
-    PenTool, Briefcase, Zap, Cog, Instagram, Award, Star, Users, 
+    Bot, Sparkles, FileText, Zap, Instagram, Award, Star, Users, 
     TrendingUp, BadgeCheck, Brain, Layout, ListChecks, FileEdit, 
-    Code, Target
+    Code, Target, Briefcase, UsersRound, MessageSquareQuote
 } from "lucide-react";
 import { FeedbackScroller } from "@/components/feedback/FeedbackScroller";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { UserGuide } from "@/components/guide/UserGuide";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 // @ts-ignore
 import termsContent from "@/marketing/terms-and-conditions.md?raw";
+import React from "react";
 
 const Auth = () => {
   const { isAuthenticated, isLoading } = useAuth();
 
   const features = [
-    { icon: FileText, title: "ATS Resumes" },
-    { icon: Layout, title: "Resume Enhance" },
-    { icon: FileEdit, title: "Cover Letters" },
-    { icon: Brain, title: "AI Interviews" },
-    { icon: TrendingUp, title: "Career Analysis" },
-    { icon: ListChecks, title: "Interview Q's" },
+    { icon: FileText, title: "ATS-Optimized Resumes", description: "Craft resumes that impress bots and humans alike." },
+    { icon: Brain, title: "AI Interview Coach", description: "Practice and get feedback to ace your interviews." },
+    { icon: Layout, title: "Stunning Templates", description: "Choose from modern, professional designs." },
+    { icon: TrendingUp, title: "Career Insights", description: "Analyze your path and identify growth areas." },
+    { icon: FileEdit, title: "Impactful Cover Letters", description: "Generate compelling cover letters in minutes." },
+    { icon: ListChecks, title: "Targeted Interview Q's", description: "Get questions tailored to your desired job." },
   ];
+
+  const templateSlides = [
+    { src: "/lovable-uploads/97d4e39c-c0fe-4d28-bc16-6fdbe23768c4.png", alt: "Professional Resume Template", name: "Modern Professional" },
+    { src: "/lovable-uploads/df6b6371-05c8-4591-9f85-f1325f8876b8.png", alt: "Professional Modern Resume Template", name: "Sleek Professional" },
+    { src: "/lovable-uploads/f1270df4-d58b-44f7-b53b-64bf981ec296.png", alt: "Simple Resume Template", name: "Clean & Simple" },
+    { src: "/lovable-uploads/f576f4f5-d2f9-4771-913b-ba0f9395c02a.png", alt: "Modern Resume Template", name: "Executive Modern" },
+    { src: "/lovable-uploads/creative_sample.png", alt: "Creative Resume Template", name: "Bold Creative" },
+    { src: "/lovable-uploads/f531c379-d2e9-4680-84be-4397b761df36.png", alt: "Hybrid Resume Template", name: "Tech Hybrid" },
+  ];
+
+  const [currentSlideIndex, setCurrentSlideIndex] = React.useState(0);
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      setCurrentSlideIndex((prevIndex) =>
+        prevIndex === templateSlides.length - 1 ? 0 : prevIndex + 1
+      );
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, [currentSlideIndex, templateSlides.length]);
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#0D2B39] flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-[#4DBADC] border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen bg-gradient-to-br from-[#07101B] to-[#020617] flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-[#60A5FA] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -39,412 +59,258 @@ const Auth = () => {
     return <Navigate to="/home" replace />;
   }
 
-  const containerVariants = {
+  const staggerContainer = {
     hidden: { opacity: 0 },
-    visible: { 
+    visible: {
       opacity: 1,
-      transition: { staggerChildren: 0.1, delayChildren: 0.2 }
+      transition: { staggerChildren: 0.15, delayChildren: 0.2 }
     },
   };
 
-  const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: { 
-      y: 0, 
+  const fadeInItem = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 100, duration: 0.5 }},
+  };
+
+  const heroImageContainerVariants = {
+    initial: { opacity: 0, scale: 0.9, y: 30 },
+    animate: { opacity: 1, scale: 1, y: 0, transition: { duration: 0.7, ease: [0.6, -0.05, 0.01, 0.99], delay: 0.3 } },
+  };
+
+  const slideVariants = {
+    enter: (direction: number) => {
+      return {
+        x: direction > 0 ? 300 : -300,
+        opacity: 0,
+        scale: 0.9,
+      };
+    },
+    center: {
+      zIndex: 1,
+      x: 0,
       opacity: 1,
-      transition: { type: "spring", stiffness: 100 }
+      scale: 1,
+    },
+    exit: (direction: number) => {
+      return {
+        zIndex: 0,
+        x: direction < 0 ? 300 : -300,
+        opacity: 0,
+        scale: 0.9,
+      };
     },
   };
 
   return (
-    <div className="min-h-screen relative bg-[#071B24] text-[#B8E5F2] flex flex-col overflow-x-hidden">
+    <div className="min-h-screen relative bg-gradient-to-br from-[#07101B] to-[#020617] text-slate-200 flex flex-col overflow-x-hidden font-sans">
       <div className="absolute inset-0 z-0 overflow-hidden">
         <motion.div 
-          className="absolute inset-0 bg-gradient-to-br from-[#071B24] via-[#0D2B39] to-[#0F3847]"
-          animate={{ backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"] }}
-          transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
-          style={{ backgroundSize: '200% 200%' }}
+          className="absolute -top-1/3 -left-1/4 w-3/5 h-3/5 bg-gradient-radial from-[#3B82F6]/15 via-transparent to-transparent rounded-full"
+          animate={{ scale: [1, 1.15, 1], opacity: [0.7, 1, 0.7] }}
+          transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <motion.div 
+          className="absolute -bottom-1/3 -right-1/4 w-3/5 h-3/5 bg-gradient-radial from-[#818CF8]/10 via-transparent to-transparent rounded-full"
+          animate={{ scale: [1, 1.1, 1], opacity: [0.6, 0.9, 0.6] }}
+          transition={{ duration: 25, repeat: Infinity, ease: "easeInOut", delay: 5 }}
         />
         <div 
-          className="absolute inset-0 opacity-[0.07]"
+          className="absolute inset-0 opacity-[0.03]"
           style={{ 
-            backgroundImage: 'radial-gradient(circle, #4DBADC 0.5px, transparent 0.5px)',
-            backgroundSize: '30px 30px',
+            backgroundImage: 'linear-gradient(to right, #60A5FA 0.5px, transparent 0.5px), linear-gradient(to bottom, #60A5FA 0.5px, transparent 0.5px)',
+            backgroundSize: '40px 40px',
           }}>
         </div>
-        <div 
-          className="absolute inset-0 opacity-5"
-          style={{
-            backgroundImage: `
-              repeating-linear-gradient(45deg, #4DBADC 0, #4DBADC 1px, transparent 1px, transparent 50px),
-              repeating-linear-gradient(-45deg, #4DBADC 0, #4DBADC 1px, transparent 1px, transparent 50px)
-            `,
-            maskImage: 'radial-gradient(ellipse at center, black 30%, transparent 70%)',
-            animation: 'moveLines 30s linear infinite',
-          }}
-        />
-        <motion.div 
-          className="absolute -top-1/4 -left-1/4 w-1/2 h-1/2 bg-[#4DBADC]/5 rounded-full blur-[150px]"
-          animate={{ scale: [1, 1.1, 1], x: [-20, 20, -20], y: [-10, 10, -10] }}
-          transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
-        />
-        <motion.div 
-          className="absolute -bottom-1/4 -right-1/4 w-1/2 h-1/2 bg-[#1A85A4]/5 rounded-full blur-[150px]"
-          animate={{ scale: [1, 1.05, 1], x: [30, -30, 30], y: [15, -15, 15] }}
-          transition={{ duration: 18, repeat: Infinity, ease: "easeInOut", delay: 3 }}
-        />
-        <motion.div 
-          className="absolute top-1/3 right-[5%] w-1/4 h-1/4 bg-[#5ECBE8]/3 rounded-full blur-[100px]"
-          animate={{ scale: [1, 1.08, 1], rotate: [0, 10, 0] }}
-          transition={{ duration: 22, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-        />
-        <motion.div 
-          className="absolute bottom-[10%] left-[10%] w-1/5 h-1/5 bg-[#4DBADC]/3 rounded-full blur-[80px]"
-          animate={{ x: [-15, 15, -15], y: [5, -5, 5] }}
-          transition={{ duration: 19, repeat: Infinity, ease: "easeInOut", delay: 4 }}
-        />
-        <motion.div 
-          className="absolute top-[15%] right-[10%] w-16 h-16 opacity-[0.04] text-[#4DBADC]"
-          initial={{ scale: 0, rotate: -45 }}
-          animate={{ scale: 1, rotate: 0 }}
-          transition={{ delay: 1.2, type: "spring", stiffness: 100 }}
-        >
-          <Code className="w-full h-full" />
-        </motion.div>
-        <motion.div 
-          className="absolute bottom-[20%] left-[5%] w-12 h-12 opacity-[0.04] text-[#4DBADC]"
-          initial={{ scale: 0, rotate: 45 }}
-          animate={{ scale: 1, rotate: 0 }}
-          transition={{ delay: 1.4, type: "spring", stiffness: 100 }}
-        >
-          <Target className="w-full h-full" />
-        </motion.div>
-        <motion.div 
-          className="absolute top-[60%] right-[25%] w-10 h-10 opacity-[0.03] text-[#4DBADC]"
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ delay: 1.6, type: "spring", stiffness: 100 }}
-        >
-          <Brain className="w-full h-full" />
-        </motion.div>
       </div>
 
-      <motion.div 
-        initial={{ y: -50, opacity: 0 }}
+      <motion.header
+        initial={{ y: -60, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.1, type: "spring", stiffness: 100 }}
-        className="relative z-20 w-full bg-gradient-to-r from-[#071B24]/80 to-[#0D2B39]/80 border-b border-[#4DBADC]/20 backdrop-blur-md py-2"
+        transition={{ delay: 0.1, type: "spring", stiffness: 90 }}
+        className="relative z-20 w-full py-3 sm:py-4 border-b border-[#60A5FA]/10 bg-[#020617]/50 backdrop-blur-md"
       >
-        <div className="max-w-screen-xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 px-4">
-          <div className="flex items-center gap-2">
-            <div className="flex items-center p-1 bg-[#4DBADC]/10 rounded-full">
-              <BadgeCheck className="w-4 h-4 text-[#4DBADC]" />
+        <div className="max-w-screen-xl mx-auto flex items-center justify-between px-4 sm:px-6">
+          <Link to="/" className="flex items-center gap-2 group">
+            <div className="p-2 bg-gradient-to-br from-[#3B82F6] to-[#818CF8] rounded-lg shadow-lg group-hover:scale-105 transition-transform">
+              <Bot className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
             </div>
-            <span className="text-[#B8E5F2] text-xs">
-              <span className="font-semibold">Top Rated</span> by Verified Users
-            </span>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            <div className="flex items-center p-1 bg-[#4DBADC]/10 rounded-full">
-              <TrendingUp className="w-4 h-4 text-[#4DBADC]" />
+            <h1 className="font-righteous text-2xl sm:text-3xl bg-clip-text text-transparent bg-gradient-to-r from-slate-100 via-slate-300 to-slate-100 group-hover:opacity-80 transition-opacity">
+              Resume Magic AI
+            </h1>
+          </Link>
+          <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm">
+            <div className="flex items-center p-1.5 px-2 bg-[#60A5FA]/10 rounded-full border border-[#60A5FA]/20">
+              <Star className="w-3 h-3 sm:w-4 sm:h-4 text-amber-400 mr-1.5" />
+              <span className="text-slate-300">Top Rated</span>
             </div>
-            <span className="text-[#B8E5F2] text-xs">
-              <span className="font-semibold">One of the Emerging AI Applications</span> in 2025
-            </span>
+            <div className="hidden sm:flex items-center p-1.5 px-2 bg-[#60A5FA]/10 rounded-full border border-[#60A5FA]/20">
+              <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4 text-emerald-400 mr-1.5" />
+              <span className="text-slate-300">Emerging AI</span>
+            </div>
           </div>
         </div>
-      </motion.div>
+      </motion.header>
 
-      <div className="relative z-10 px-4 flex-1 max-w-screen-xl mx-auto w-full flex flex-col-reverse md:flex-row">
+      <main className="relative z-10 flex-1 w-full max-w-screen-xl mx-auto px-4 py-8 sm:py-12 flex flex-col lg:flex-row items-center lg:gap-12">
         <motion.div 
-          className="md:w-1/2 py-10 flex flex-col"
-          variants={containerVariants}
+          className="lg:w-1/2 flex flex-col items-center lg:items-start text-center lg:text-left"
+          variants={staggerContainer}
           initial="hidden"
           animate="visible"
         >
-          <motion.header 
-            className="pt-6 pb-6 flex justify-center md:justify-start items-center"
-            variants={itemVariants}
+          <motion.h2 
+            variants={fadeInItem}
+            className="text-4xl sm:text-5xl md:text-6xl font-extrabold mb-6 bg-gradient-to-r from-slate-50 via-slate-200 to-blue-300 bg-clip-text text-transparent leading-tight"
           >
-            <div className="flex items-center mb-2 relative group">
-              <div className="absolute -inset-2 bg-gradient-to-r from-[#4DBADC] to-[#1A85A4] rounded-full blur opacity-40 group-hover:opacity-70 transition duration-700 animate-pulse-slow"></div>
-              <div className="relative bg-[#0D2B39] p-3 rounded-full border border-[#4DBADC]/30 shadow-lg">
-                <Bot className="w-8 h-8 text-[#4DBADC] group-hover:text-white transition-colors duration-300" />
-              </div>
-              <h1 className="font-righteous text-4xl ml-4 bg-clip-text text-transparent bg-gradient-to-r from-[#4DBADC] via-[#5ECBE8] to-[#1A85A4] drop-shadow-lg group-hover:from-[#5ECBE8] group-hover:to-[#4DBADC] transition-all duration-500">
-                Resume Magic AI
-              </h1>
-            </div>
-          </motion.header>
-
-          <motion.div 
-            className="mb-8 px-4 md:px-0"
-            variants={itemVariants}
+            Craft Your Future, <span className="block sm:inline">One Resume at a Time.</span>
+          </motion.h2>
+          <motion.p 
+            variants={fadeInItem}
+            className="text-slate-300/90 text-base sm:text-lg md:text-xl mb-8 max-w-xl"
           >
-            <h3 className="text-lg font-medium text-center md:text-left text-[#B8E5F2]/90 mb-4">Unlock Your Potential With:</h3>
-            <motion.div 
-              className="grid grid-cols-2 sm:grid-cols-3 gap-3"
-              variants={containerVariants}
-            >
-              {features.map((feature, index) => (
-                <motion.div 
-                  key={index} 
-                  className="flex items-center space-x-2 p-2 rounded-lg bg-[#0F3847]/40 border border-[#4DBADC]/10 backdrop-blur-sm hover:bg-[#0F3847]/70 hover:border-[#4DBADC]/30 transition-all duration-200 cursor-default shadow-md hover:shadow-lg"
-                  variants={itemVariants}
-                  whileHover={{ scale: 1.05, y: -2 }}
-                >
-                  <div className="p-1.5 bg-[#0D2B39]/50 rounded border border-[#4DBADC]/20 shadow-inner">
-                    <feature.icon className="w-4 h-4 text-[#4DBADC]" />
-                  </div>
-                  <span className="text-xs text-[#B8E5F2]/80">{feature.title}</span>
-                </motion.div>
-              ))}
-            </motion.div>
+            Leverage AI to build job-winning resumes and cover letters in minutes. Get personalized interview coaching and land your dream job faster.
+          </motion.p>
+          
+          <motion.div variants={fadeInItem} className="w-full max-w-sm lg:max-w-md mb-10 lg:mb-0">
+            <AuthButton />
           </motion.div>
 
-          <motion.div 
-            className="flex-1 flex flex-col items-center justify-center py-6 px-4 md:justify-start"
-          >
-            <div className="w-full max-w-md relative space-y-6">
-              <div className="absolute -inset-1.5 bg-gradient-to-r from-[#4DBADC] via-[#5ECBE8] to-[#1A85A4] rounded-2xl blur-md opacity-60 animate-pulse-slow"></div>
-              <div> 
-                <AuthButton />
-              </div>
-            </div>
+          <motion.div variants={fadeInItem} className="mt-8 flex flex-wrap justify-center lg:justify-start gap-3 text-xs text-slate-400">
+              <span className="flex items-center"><BadgeCheck className="w-4 h-4 text-green-400 mr-1.5"/> ATS-Friendly</span>
+              <span className="flex items-center"><Sparkles className="w-4 h-4 text-yellow-400 mr-1.5"/> AI-Powered</span>
+              <span className="flex items-center"><Briefcase className="w-4 h-4 text-sky-400 mr-1.5"/> Professional Templates</span>
           </motion.div>
         </motion.div>
 
         <motion.div 
-          className="md:w-1/2 relative flex items-center justify-center p-4 mt-16 md:mt-0 md:pt-48"
-          initial={{ x: 100, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          transition={{ delay: 0.3, type: "spring", stiffness: 80 }}
+          className="lg:w-1/2 mt-16 lg:mt-0 flex flex-col justify-center items-center"
+          variants={heroImageContainerVariants}
+          initial="initial"
+          animate="animate"
         >
-          <div className="absolute top-4 md:top-8 left-0 right-0 z-20 px-4 md:px-10">
-            <motion.div 
-              className="relative"
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: 0.5, duration: 0.5 }}
-            >
-              <div className="absolute -inset-px bg-gradient-to-r from-[#4DBADC]/50 via-[#5ECBE8]/50 to-[#4DBADC]/50 rounded-xl blur-sm"></div>
-              
-              <div className="relative bg-gradient-to-br from-[#071B24]/80 to-[#0D2B39]/80 border border-[#4DBADC]/30 rounded-xl p-4 md:p-6 backdrop-blur-md shadow-xl overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-radial from-[#4DBADC]/10 via-transparent to-transparent opacity-50"></div>
-                
-                <Sparkles className="absolute -top-3 -left-3 text-[#4DBADC] w-6 h-6 animate-pulse" />
-                <Sparkles className="absolute -bottom-3 -right-3 text-[#4DBADC] w-6 h-6 animate-pulse" />
-                
-                <h2 className="relative z-10 text-xl md:text-2xl font-bold mb-2 text-white text-center">
-                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#4DBADC] to-white">
-                    Your Career Breakthrough
-                  </span>
-                </h2>
-                
-                <p className="relative z-10 text-sm md:text-base text-[#B8E5F2] leading-relaxed text-center">
-                  Create <span className="font-bold text-white">ATS-friendly resumes</span> tailored to your target job description <span className="font-bold text-white">in just a minute</span>, boosting your chances of landing interviews. Join the many users already finding success with our app to secure their <span className="italic text-[#4DBADC]">dream jobs</span>.
-                </p>
-              </div>
-            </motion.div>
-          </div>
-          
-          <div className="relative w-full max-w-lg">
-            <div className="absolute inset-0 bg-[#4DBADC]/10 rounded-full blur-3xl animate-pulse-slow"></div>
-            
-            <motion.div 
-              className="relative flex flex-col items-center mt-28 md:mt-24"
-              initial={{ y: 50, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.4, duration: 0.8 }}
-            >
-              <img 
-                src="/lovable-uploads/f8b6c98c-220f-4ffd-a189-72a7ae5969c5.png" 
-                alt="AI Resume Assistant Robot" 
-                className="w-full max-w-[500px] h-auto z-10 drop-shadow-[0_0_40px_rgba(77,186,220,0.5)]"
+          <div className="w-full max-w-md lg:max-w-lg aspect-[4/3] bg-gradient-to-br from-[#3B82F6]/10 to-[#818CF8]/10 rounded-3xl shadow-2xl border border-[#60A5FA]/20 relative overflow-hidden p-2">
+            <AnimatePresence initial={false} custom={currentSlideIndex}>
+              <motion.img
+                key={currentSlideIndex}
+                src={templateSlides[currentSlideIndex].src}
+                alt={templateSlides[currentSlideIndex].alt}
+                custom={currentSlideIndex}
+                variants={slideVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={{
+                  x: { type: "spring", stiffness: 300, damping: 30 },
+                  opacity: { duration: 0.3 },
+                  scale: { duration: 0.3 }
+                }}
+                className="absolute inset-0 w-full h-full object-contain rounded-2xl p-1"
               />
-              
-              {[
-                { icon: FileCheck, className: "top-[10%] -right-8", delay: 0.6 },
-                { icon: CircleUser, className: "bottom-[30%] -left-12", delay: 0.7 },
-                { icon: Database, className: "top-1/3 left-[-15%]", delay: 0.8 },
-              ].map((item, index) => (
-                <motion.div
-                  key={index}
-                  className={`absolute backdrop-blur-sm p-3 rounded-lg border border-[#4DBADC]/10 bg-[#0F3847]/30 shadow-lg ${item.className}`}
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: item.delay, type: "spring", stiffness: 150 }}
-                  whileHover={{ scale: 1.1, rotate: 5 }}
-                >
-                  <item.icon className="w-8 h-8 text-[#4DBADC]" />
-                </motion.div>
-              ))}
-              
-              <motion.div 
-                className="absolute top-[15%] right-[-5%] h-32 w-24 backdrop-blur-sm rounded-lg border border-[#4DBADC]/10 bg-[#0F3847]/30 p-2 flex flex-col gap-1 shadow-lg transform rotate-6"
-                initial={{ x: 50, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                transition={{ delay: 0.9, type: "spring" }}
-                whileHover={{ rotate: 0, scale: 1.05 }}
-              >
-                <div className="h-4 w-full bg-[#4DBADC]/20 rounded"></div>
-                <div className="h-3 w-3/4 bg-[#4DBADC]/20 rounded"></div>
-                <div className="h-3 w-full bg-[#4DBADC]/20 rounded"></div>
-                <div className="h-3 w-2/3 bg-[#4DBADC]/20 rounded"></div>
-                <div className="h-3 w-4/5 bg-[#4DBADC]/20 rounded"></div>
-              </motion.div>
-              
-              <div className="absolute bottom-0 w-32 h-4 bg-[#4DBADC] rounded-full blur-xl opacity-40 animate-pulse"></div>
-            </motion.div>
-            
-            <motion.div 
-              className="absolute top-10 right-20"
-              initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 1.0 }}
-            >
-              <Sparkles className="text-[#4DBADC] opacity-70 animate-pulse w-6 h-6" />
-            </motion.div>
-            <motion.div 
-              className="absolute bottom-20 left-10"
-              initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 1.1 }}
-            >
-              <Sparkles className="text-[#4DBADC] opacity-70 animate-pulse w-5 h-5" />
-            </motion.div>
+            </AnimatePresence>
+            <div className="absolute bottom-2 left-2 right-2 p-2 bg-black/50 backdrop-blur-sm rounded-b-2xl text-center">
+                <p className="text-white text-sm font-semibold">{templateSlides[currentSlideIndex].name}</p>
+            </div>
           </div>
+          <motion.div 
+            className="mt-6 text-center p-4 bg-gradient-to-r from-green-500/10 via-emerald-500/10 to-teal-500/10 border border-green-400/30 rounded-xl shadow-lg max-w-md lg:max-w-lg"
+            initial={{opacity: 0, y: 20}}
+            animate={{opacity:1, y: 0}}
+            transition={{delay: 0.6, duration: 0.5}}
+          >
+            <div className="flex items-center justify-center mb-2">
+              <BadgeCheck className="w-6 h-6 text-green-400 mr-2" />
+              <h4 className="text-lg font-semibold text-green-300">HR Approved & Proven to Get Hired!</h4>
+            </div>
+            <p className="text-sm text-slate-300/90">
+              Our templates are designed with industry best practices. Thousands have successfully landed interviews using these formats.
+            </p>
+          </motion.div>
         </motion.div>
-      </div>
-      
-      <motion.div 
-        className="py-12 md:py-16 relative z-10 backdrop-blur-lg border-t border-[#4DBADC]/10 bg-gradient-to-b from-[#0F3847]/80 to-[#0D2B39]/80"
+      </main>
+
+      <motion.section 
+        className="py-12 sm:py-16 relative z-10 bg-[#020617]/30 backdrop-blur-sm border-t border-[#60A5FA]/10"
         initial="hidden"
         whileInView="visible"
         viewport={{ once: true, amount: 0.2 }}
-        variants={containerVariants}
+        variants={staggerContainer}
       >
         <div className="max-w-screen-xl mx-auto px-4">
-          <motion.div className="text-center mb-12" variants={itemVariants}>
-            <h2 className="text-2xl md:text-3xl font-semibold text-white mb-3 relative inline-block">
-              <span className="relative z-10">AI-Powered Resume Assistance</span>
-              <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-2/3 h-1 bg-gradient-to-r from-transparent via-[#4DBADC] to-transparent rounded-full"></div>
-            </h2>
-          </motion.div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[
-              { icon: FileText, title: "Smart Resume Analysis", description: "Our AI evaluates your resume against industry standards and provides instant optimization suggestions." },
-              { icon: PenTool, title: "Professional Templates", description: "Choose from a variety of ATS-friendly resume designs optimized for your industry and career stage." },
-              { icon: Zap, title: "Interview Preparation", description: "Practice with our AI interview coach to prepare for common questions and improve your responses." }
-            ].map((item, index) => (
+          <motion.h3 
+            variants={fadeInItem}
+            className="text-3xl sm:text-4xl font-bold text-center mb-10 sm:mb-14 bg-gradient-to-r from-slate-100 to-slate-300 bg-clip-text text-transparent"
+          >
+            Everything You Need to Succeed
+          </motion.h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+            {features.map((feature, index) => (
               <motion.div 
                 key={index}
-                className="relative group backdrop-blur-lg rounded-xl p-6 transition-all duration-300 bg-gradient-to-br from-[#0F3847]/40 to-[#0D2B39]/40 border border-[#4DBADC]/10 hover:border-[#4DBADC]/30 shadow-md hover:shadow-xl overflow-hidden"
-                variants={itemVariants}
-                whileHover={{ y: -5 }}
+                className="relative group bg-gradient-to-br from-[#0F172A]/70 to-[#1E293B]/60 border border-[#60A5FA]/20 rounded-xl p-6 shadow-lg hover:shadow-sky-500/20 transition-all duration-300 hover:border-[#60A5FA]/40"
+                variants={fadeInItem}
+                whileHover={{ y: -6, scale: 1.03 }}
               >
-                <div className="absolute inset-0 bg-gradient-radial from-[#4DBADC]/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                
-                <div className="relative z-10 flex items-center mb-4">
-                  <div className="p-2 bg-[#0F3847]/50 rounded-lg mr-3 border border-[#4DBADC]/20 group-hover:border-[#4DBADC]/40 transition-colors">
-                    <item.icon className="w-6 h-6 text-[#4DBADC]" />
+                <div className="absolute top-0 left-0 w-full h-full bg-gradient-radial from-[#60A5FA]/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-400 rounded-xl"></div>
+                <div className="relative z-10 flex items-start mb-4">
+                  <div className="p-3 bg-gradient-to-br from-[#3B82F6] to-[#60A5FA] rounded-lg mr-4 shadow-md group-hover:from-[#60A5FA] group-hover:to-[#3B82F6] transition-colors">
+                    <feature.icon className="w-6 h-6 text-white" />
                   </div>
-                  <h3 className="text-white font-medium text-lg">{item.title}</h3>
+                  <div>
+                    <h4 className="text-lg sm:text-xl font-semibold text-slate-100 mb-1">{feature.title}</h4>
+                  </div>
                 </div>
-                <p className="relative z-10 text-[#B8E5F2] text-sm">{item.description}</p>
+                <p className="relative z-10 text-slate-300/80 text-sm sm:text-base">{feature.description}</p>
               </motion.div>
             ))}
           </div>
         </div>
-      </motion.div>
-      
-      <motion.div 
-        className="relative z-20 w-full bg-gradient-to-r from-[#071B24] to-[#0D2B39] border-y border-[#4DBADC]/20 py-4 backdrop-blur-sm"
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true, amount: 0.5 }}
-        transition={{ duration: 0.5 }}
-      >
-        <div className="max-w-screen-xl mx-auto px-4">
-          <div className="flex flex-col md:flex-row items-center justify-center md:justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-full bg-[#4DBADC]/10">
-                <Award className="w-6 h-6 text-[#4DBADC]" />
-              </div>
-              <div className="text-center md:text-left">
-                <h3 className="text-white text-sm font-medium">Top-Rated Resume Builder</h3>
-                <div className="flex items-center mt-1">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <Star key={star} className="w-3 h-3 fill-[#4DBADC] text-[#4DBADC]" />
-                  ))}
-                  <span className="text-[#B8E5F2] text-xs ml-1">Highly Rated</span>
-                </div>
-              </div>
-            </div>
-            
-            <div className="h-8 border-l border-[#4DBADC]/20 hidden md:block"></div>
-            
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-full bg-[#4DBADC]/10">
-                <Users className="w-6 h-6 text-[#4DBADC]" />
-              </div>
-              <div className="text-center md:text-left">
-                <h3 className="text-white text-sm font-medium">Trusted by Job Seekers</h3>
-                <p className="text-[#B8E5F2] text-xs">Users found success with our platform</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </motion.div>
-      
-      <div className="relative z-10 flex justify-end max-w-screen-xl mx-auto px-4 py-8">
+      </motion.section>
+
+      <div className="relative z-10 py-10 sm:py-14 max-w-screen-xl mx-auto w-full px-4">
+        <motion.h3 
+          initial={{opacity:0, y:20}}
+          whileInView={{opacity:1, y:0}}
+          viewport={{once: true, amount: 0.3}}
+          transition={{duration:0.5}}
+          className="text-2xl sm:text-3xl font-bold text-center mb-8 sm:mb-12 text-slate-200"
+        >
+          Loved by Job Seekers
+        </motion.h3>
         <FeedbackScroller />
       </div>
-      
-      <footer className="relative z-20 py-6 border-t border-[#4DBADC]/10 bg-gradient-to-b from-[#0D2B39]/90 to-[#071B24]/90 backdrop-blur-md">
+
+      <footer className="relative z-20 py-6 sm:py-8 border-t border-[#60A5FA]/10 bg-[#020617]/70 backdrop-blur-md">
         <div className="max-w-screen-xl mx-auto px-4">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-[#B8E5F2]/50 text-sm">
-              © 2025 ResumeMagic AI Services. All rights reserved.
+            <p className="text-slate-400/80 text-xs sm:text-sm">
+              © {new Date().getFullYear()} ResumeMagic AI. All rights reserved.
             </p>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-3 sm:space-x-4">
               <UserGuide />
-              <Link to="/pricing" className="text-[#B8E5F2]/50 hover:text-[#B8E5F2] text-sm hover:underline transition-colors duration-200">
+              <Link to="/pricing" className="text-slate-400 hover:text-sky-400 text-xs sm:text-sm hover:underline transition-colors duration-200">
                 Pricing
               </Link>
-              {/* Terms & Conditions Dialog */}
               <Dialog>
-                <DialogTrigger className="text-[#B8E5F2]/50 hover:text-[#B8E5F2] text-sm hover:underline transition-colors duration-200">
-                  Terms & Conditions
+                <DialogTrigger className="text-slate-400 hover:text-sky-400 text-xs sm:text-sm hover:underline transition-colors duration-200">
+                  Terms
                 </DialogTrigger>
-                <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto bg-[#0D2B39] border-[#4DBADC]/30 text-[#B8E5F2]">
+                <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto bg-[#0A1220] border-[#60A5FA]/30 text-slate-300">
                   <DialogHeader>
-                    <DialogTitle className="text-xl font-bold mb-4 text-white flex items-center">
-                      <FileText className="w-5 h-5 mr-2 text-[#4DBADC]" />
+                    <DialogTitle className="text-xl font-bold mb-3 text-slate-100 flex items-center">
+                      <FileText className="w-5 h-5 mr-2 text-sky-400" />
                       Terms and Conditions
                     </DialogTitle>
                   </DialogHeader>
-                  <div className="prose prose-sm prose-invert max-w-none text-[#B8E5F2]/90">
+                  <div className="prose prose-sm prose-invert max-w-none text-slate-300/90">
                     <ReactMarkdown>{termsContent}</ReactMarkdown>
                   </div>
                 </DialogContent>
               </Dialog>
-              <Dialog>
-                <DialogTrigger className="text-[#B8E5F2]/50 hover:text-[#B8E5F2] text-sm hover:underline transition-colors duration-200">
-                  Contact
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle className="text-lg font-bold mb-4">Contact Information</DialogTitle>
-                  </DialogHeader>
-                  <div className="prose prose-sm max-w-none text-gray-700 mt-2">
-                    <p>customer_support@resumemagic-ai.com</p>
-                  </div>
-                </DialogContent>
-              </Dialog>
               <a 
-                href="https://www.instagram.com/resumemagic_ai?igsh=bnd0Z2VhcjN0NjNj&utm_source=qr" 
+                href="https://www.instagram.com/resumemagic_ai" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="flex items-center text-[#B8E5F2]/50 hover:text-[#B8E5F2] text-sm hover:underline transition-colors duration-200"
+                className="flex items-center text-slate-400 hover:text-pink-500 text-xs sm:text-sm hover:underline transition-colors duration-200"
               >
                 <Instagram className="w-4 h-4 mr-1" />
                 Instagram
@@ -455,13 +321,27 @@ const Auth = () => {
       </footer>
       
       <style>{`
-        @keyframes pulse-slow {
-          0%, 100% { opacity: 0.4; }
-          50% { opacity: 0.7; }
+        body {
+          font-family: 'Inter', sans-serif;
         }
-        @keyframes moveLines {
-          0% { background-position: 0 0; }
-          100% { background-position: 100px 100px; }
+        .font-righteous {
+          font-family: 'Righteous', cursive; 
+        }
+        @keyframes pulse-slow {
+          0%, 100% { opacity: 0.6; transform: scale(1); }
+          50% { opacity: 0.9; transform: scale(1.05); }
+        }
+        .aspect-\\[4\\/3\\] {
+            position: relative;
+            width: 100%;
+            padding-bottom: 75%;
+        }
+        .aspect-\\[4\\/3\\] > img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
         }
       `}</style>
     </div>
